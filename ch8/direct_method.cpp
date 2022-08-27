@@ -25,17 +25,17 @@ typedef Eigen::Matrix<double, 6, 1> Vector6d;
 class JacobianAccumulator {
 public:
     JacobianAccumulator(
-        const cv::Mat &img1_,
-        const cv::Mat &img2_,
-        const VecVector2d &px_ref_,
+        const cv::Mat& img1_,
+        const cv::Mat& img2_,
+        const VecVector2d& px_ref_,
         const vector<double> depth_ref_,
-        Sophus::SE3d &T21_) :
+        Sophus::SE3d& T21_) :
         img1(img1_), img2(img2_), px_ref(px_ref_), depth_ref(depth_ref_), T21(T21_) {
         projection = VecVector2d(px_ref.size(), Eigen::Vector2d(0, 0));
     }
 
     /// accumulate jacobians in a range
-    void accumulate_jacobian(const cv::Range &range);
+    void accumulate_jacobian(const cv::Range& range);
 
     /// get hessian matrix
     Matrix6d hessian() const { return H; }
@@ -57,11 +57,11 @@ public:
     }
 
 private:
-    const cv::Mat &img1;
-    const cv::Mat &img2;
-    const VecVector2d &px_ref;
+    const cv::Mat& img1;
+    const cv::Mat& img2;
+    const VecVector2d& px_ref;
     const vector<double> depth_ref;
-    Sophus::SE3d &T21;
+    Sophus::SE3d& T21;
     VecVector2d projection; // projected points
 
     std::mutex hessian_mutex;
@@ -79,11 +79,11 @@ private:
  * @param T21
  */
 void DirectPoseEstimationMultiLayer(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const VecVector2d &px_ref,
+    const cv::Mat& img1,
+    const cv::Mat& img2,
+    const VecVector2d& px_ref,
     const vector<double> depth_ref,
-    Sophus::SE3d &T21
+    Sophus::SE3d& T21
 );
 
 /**
@@ -95,21 +95,21 @@ void DirectPoseEstimationMultiLayer(
  * @param T21
  */
 void DirectPoseEstimationSingleLayer(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const VecVector2d &px_ref,
+    const cv::Mat& img1,
+    const cv::Mat& img2,
+    const VecVector2d& px_ref,
     const vector<double> depth_ref,
-    Sophus::SE3d &T21
+    Sophus::SE3d& T21
 );
 
 // bilinear interpolation
-inline float GetPixelValue(const cv::Mat &img, float x, float y) {
+inline float GetPixelValue(const cv::Mat& img, float x, float y) {
     // boundary check
     if (x < 0) x = 0;
     if (y < 0) y = 0;
     if (x >= img.cols) x = img.cols - 1;
     if (y >= img.rows) y = img.rows - 1;
-    uchar *data = &img.data[int(y) * img.step + int(x)];
+    uchar* data = &img.data[int(y) * img.step + int(x)];
     float xx = x - floor(x);
     float yy = y - floor(y);
     return float(
@@ -117,10 +117,10 @@ inline float GetPixelValue(const cv::Mat &img, float x, float y) {
         xx * (1 - yy) * data[1] +
         (1 - xx) * yy * data[img.step] +
         xx * yy * data[img.step + 1]
-    );
+        );
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 
     cv::Mat left_img = cv::imread(left_file, 0);
     cv::Mat disparity_img = cv::imread(disparity_file, 0);
@@ -155,11 +155,11 @@ int main(int argc, char **argv) {
 }
 
 void DirectPoseEstimationSingleLayer(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const VecVector2d &px_ref,
+    const cv::Mat& img1,
+    const cv::Mat& img2,
+    const VecVector2d& px_ref,
     const vector<double> depth_ref,
-    Sophus::SE3d &T21) {
+    Sophus::SE3d& T21) {
 
     const int iterations = 10;
     double cost = 0, lastCost = 0;
@@ -169,7 +169,7 @@ void DirectPoseEstimationSingleLayer(
     for (int iter = 0; iter < iterations; iter++) {
         jaco_accu.reset();
         cv::parallel_for_(cv::Range(0, px_ref.size()),
-                          std::bind(&JacobianAccumulator::accumulate_jacobian, &jaco_accu, std::placeholders::_1));
+            std::bind(&JacobianAccumulator::accumulate_jacobian, &jaco_accu, std::placeholders::_1));
         Matrix6d H = jaco_accu.hessian();
         Vector6d b = jaco_accu.bias();
 
@@ -203,7 +203,7 @@ void DirectPoseEstimationSingleLayer(
 
     // plot the projected pixels here
     cv::Mat img2_show;
-    cv::cvtColor(img2, img2_show, CV_GRAY2BGR);
+    cv::cvtColor(img2, img2_show, cv::COLOR_GRAY2BGR);
     VecVector2d projection = jaco_accu.projected_points();
     for (size_t i = 0; i < px_ref.size(); ++i) {
         auto p_ref = px_ref[i];
@@ -211,14 +211,14 @@ void DirectPoseEstimationSingleLayer(
         if (p_cur[0] > 0 && p_cur[1] > 0) {
             cv::circle(img2_show, cv::Point2f(p_cur[0], p_cur[1]), 2, cv::Scalar(0, 250, 0), 2);
             cv::line(img2_show, cv::Point2f(p_ref[0], p_ref[1]), cv::Point2f(p_cur[0], p_cur[1]),
-                     cv::Scalar(0, 250, 0));
+                cv::Scalar(0, 250, 0));
         }
     }
     cv::imshow("current", img2_show);
     cv::waitKey();
 }
 
-void JacobianAccumulator::accumulate_jacobian(const cv::Range &range) {
+void JacobianAccumulator::accumulate_jacobian(const cv::Range& range) {
 
     // parameters
     const int half_patch_size = 1;
@@ -251,7 +251,7 @@ void JacobianAccumulator::accumulate_jacobian(const cv::Range &range) {
             for (int y = -half_patch_size; y <= half_patch_size; y++) {
 
                 double error = GetPixelValue(img1, px_ref[i][0] + x, px_ref[i][1] + y) -
-                               GetPixelValue(img2, u + x, v + y);
+                    GetPixelValue(img2, u + x, v + y);
                 Matrix26d J_pixel_xi;
                 Eigen::Vector2d J_img_pixel;
 
@@ -293,16 +293,16 @@ void JacobianAccumulator::accumulate_jacobian(const cv::Range &range) {
 }
 
 void DirectPoseEstimationMultiLayer(
-    const cv::Mat &img1,
-    const cv::Mat &img2,
-    const VecVector2d &px_ref,
+    const cv::Mat& img1,
+    const cv::Mat& img2,
+    const VecVector2d& px_ref,
     const vector<double> depth_ref,
-    Sophus::SE3d &T21) {
+    Sophus::SE3d& T21) {
 
     // parameters
     int pyramids = 4;
     double pyramid_scale = 0.5;
-    double scales[] = {1.0, 0.5, 0.25, 0.125};
+    double scales[] = { 1.0, 0.5, 0.25, 0.125 };
 
     // create pyramids
     vector<cv::Mat> pyr1, pyr2; // image pyramids
@@ -313,9 +313,9 @@ void DirectPoseEstimationMultiLayer(
         } else {
             cv::Mat img1_pyr, img2_pyr;
             cv::resize(pyr1[i - 1], img1_pyr,
-                       cv::Size(pyr1[i - 1].cols * pyramid_scale, pyr1[i - 1].rows * pyramid_scale));
+                cv::Size(pyr1[i - 1].cols * pyramid_scale, pyr1[i - 1].rows * pyramid_scale));
             cv::resize(pyr2[i - 1], img2_pyr,
-                       cv::Size(pyr2[i - 1].cols * pyramid_scale, pyr2[i - 1].rows * pyramid_scale));
+                cv::Size(pyr2[i - 1].cols * pyramid_scale, pyr2[i - 1].rows * pyramid_scale));
             pyr1.push_back(img1_pyr);
             pyr2.push_back(img2_pyr);
         }
@@ -324,7 +324,7 @@ void DirectPoseEstimationMultiLayer(
     double fxG = fx, fyG = fy, cxG = cx, cyG = cy;  // backup the old values
     for (int level = pyramids - 1; level >= 0; level--) {
         VecVector2d px_ref_pyr; // set the keypoints in this pyramid level
-        for (auto &px: px_ref) {
+        for (auto& px : px_ref) {
             px_ref_pyr.push_back(scales[level] * px);
         }
 
